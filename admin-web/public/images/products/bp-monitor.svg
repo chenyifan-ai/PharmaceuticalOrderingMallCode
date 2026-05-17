@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#f0f4f8"/>
+  <rect x="150" y="180" width="300" height="220" rx="20" fill="#fff" stroke="#455a64" stroke-width="4"/>
+  <rect x="190" y="220" width="220" height="80" rx="8" fill="#263238"/>
+  <text x="300" y="275" text-anchor="middle" font-size="36" font-family="monospace" fill="#4fc3f7">120/80</text>
+  <ellipse cx="300" cy="380" rx="80" ry="30" fill="#cfd8dc" stroke="#455a64" stroke-width="2"/>
+  <text x="300" y="100" text-anchor="middle" font-size="40" font-family="Microsoft YaHei, sans-serif" fill="#263238" font-weight="bold">5P@‹¡</text>
+  <text x="300" y="500" text-anchor="middle" font-size="26" font-family="Microsoft YaHei, sans-serif" fill="#546e7a">'Æ™ HEM-7121 · ;—h°</text>
+</svg>

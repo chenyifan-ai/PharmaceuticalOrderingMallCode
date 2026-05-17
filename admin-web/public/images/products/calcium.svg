@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#e3f2fd"/>
+  <ellipse cx="220" cy="300" rx="55" ry="35" fill="#fff" stroke="#1976d2" stroke-width="2"/>
+  <ellipse cx="300" cy="300" rx="55" ry="35" fill="#fff" stroke="#1976d2" stroke-width="2"/>
+  <ellipse cx="380" cy="300" rx="55" ry="35" fill="#fff" stroke="#1976d2" stroke-width="2"/>
+  <text x="300" y="100" text-anchor="middle" font-size="36" font-family="Microsoft YaHei, sans-serif" fill="#0d47a1" font-weight="bold">™ô DG</text>
+  <text x="300" y="500" text-anchor="middle" font-size="26" font-family="Microsoft YaHei, sans-serif" fill="#1565c0">60G/ö · ÿi(eE</text>
+</svg>

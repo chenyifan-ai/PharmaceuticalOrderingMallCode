@@ -1,0 +1,393 @@
+# -*- coding: utf-8 -*-
+"""Generate implementation requirements + test cases markdown."""
+from pathlib import Path
+
+OUT = Path(__file__).resolve().parent.parent / "医药订货系统-实现版需求与测试.md"
+
+CONTENT = r'''# 医药订货系统 — 实现版需求与测试文档
+
+> **文档版本**: v2.0（基于当前代码库，2026-05-17）  
+> **说明**: 本文档描述**已实现**功能，替代原《医药订货系统需求文档.md》中的规划性描述，并附前后端测试用例及执行记录。  
+> **技术栈**: Spring Boot 2.7 + MyBatis-Plus + H2(dev) / MySQL(prod) + Vue3 + Element Plus + Vite
+
+---
+
+## 1. 项目概述
+
+### 1.1 建设目标
+
+构建医药 B2B 订货平台，连接**供应商**与**采购方**（药店/医院/诊所），覆盖商品浏览、资质门禁、下单支付、处方审核、物流跟踪、售后退款、对公凭证、结算对账等闭环。
+
+### 1.2 角色与 userType
+
+| userType | 角色 | 端 | 默认首页 |
+|----------|------|-----|----------|
+| 1 | 消费者/个人采购 | C 端 | `/c/home` |
+| 2 | 药店 | C 端 | `/c/home` |
+| 3 | 医院 | C 端 | `/c/home` |
+| 4 | 供应商 | B 端 | `/merchant-products` |
+| 5 | 平台管理员 | B 端 + 可进 C 端 | `/dashboard` |
+| 6 | 药师 | **仅用户管理可创建，无专属前端页面** | — |
+
+### 1.3 测试账号（密码均为 `admin123`）
+
+| 手机号 | 角色 |
+|--------|------|
+| 13800000000 | 管理员 |
+| 13800000001 | 供应商 |
+| 13800000002 | 采购用户 |
+| 13800000003 | 药师 |
+
+### 1.4 实现状态图例
+
+| 标记 | 含义 |
+|------|------|
+| ✅ | 后端 API + 前端页面均已实现 |
+| 🟡 | 后端已实现，前端不完整或仅有 API |
+| ❌ | 未实现或仅占位 |
+
+---
+
+## 2. 系统架构
+
+```
+┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  admin-web  │────▶│  /api (JWT)      │────▶│  pharmacy-mall  │
+│  Vue3 双入口 │     │  AuthInterceptor │     │  Spring Boot    │
+└─────────────┘     └──────────────────┘     └─────────────────┘
+  index.html 管理端                              H2 / MySQL
+  consumer.html 采购端
+```
+
+- **认证**: JWT，`Authorization: Bearer {token}`
+- **授权**: 无接口级 RBAC，依赖业务层校验（如 merchantId 归属）
+- **开发**: 后端 `8080`，前端 Vite 代理 `/api` → `8080`
+
+---
+
+## 3. 功能需求（按模块）
+
+### 3.1 认证与用户 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 注册/登录/验证码 | `/api/auth/*` | `Login.vue`, `ConsumerLogin.vue` |
+| 个人资料/改密 | `/api/user/*` | `CProfile.vue` |
+| 地址管理 | `/api/address/*` | `CAddresses.vue` |
+| 联系人/用药人 | `/api/contact/*`, `/api/medicationUser/*` | — |
+| 消息中心 | `/api/message/*` | `CMessages.vue` |
+
+### 3.2 企业资质 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 采购方提交资质 | `POST /api/qualification/submit` | `CQualification.vue` |
+| 管理员审核 | `POST /api/admin/qualification/review` | `QualificationList.vue` |
+| **下单门禁** | `PurchaseGuardService` | 下单失败提示 |
+
+**资质状态**: 0 待审 / 1 通过 / 2 拒绝；须通过且未过期方可下单。
+
+### 3.3 商品与首页 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| C 端首页（轮播/秒杀/套餐） | `GET /api/c/home` | `CHome.vue` |
+| 商品列表/详情/搜索 | `GET /api/c/product/*` | `CProductList.vue`, `CProductDetail.vue` |
+| 套餐详情 | `GET /api/c/home/package/{id}` | `CPackageDetail.vue` |
+| 平台商品管理 | `/api/admin/product/*` | `ProductList.vue` 等 |
+| 商家商品 | `/api/merchant/product/*` | `MerchantProductList.vue` |
+| 阶梯价 | `/api/product/tier-price/*` | 商品详情/结算 |
+| 购物车 | `/api/cart/*` | `CCart.vue` |
+
+**商品类型**: 1 OTC / 2 处方药 / 3 器械 / 4 保健品。OTC 购物车拦截处方药 SKU。
+
+### 3.4 订单与状态机 ✅
+
+**订单状态**:
+
+| code | 名称 | 说明 |
+|------|------|------|
+| 0 | 待付款 | |
+| 1 | 待审核 | 处方药支付后 |
+| 2 | 待发货 | |
+| 3 | 已发货 | 可申请退款 |
+| 4 | 已完成 | |
+| 5 | 已取消 | |
+| 6 | 退款中 | |
+| 7 | 已退款 | |
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| OTC/处方/套餐下单 | `POST /api/c/order/create-*` | `CCheckout.vue` |
+| 订单列表/详情 | `GET /api/c/order/*` | `COrders.vue`, `COrderDetail.vue` |
+| 取消/确认收货 | `POST /api/c/order/cancel|confirm` | `COrderDetail.vue` |
+| 物流轨迹 | `GET /api/c/order/{id}/logistics` | `COrderDetail.vue` |
+| 管理端/商家订单 | `/api/admin/order/*`, `/api/merchant/order/*` | `OrderList.vue` |
+| 状态历史 | `GET /api/order/status/history/{id}` | 订单详情弹窗 |
+
+> **注意**: 发货存在 `OrderService.shipOrder` 与 `OrderStatusFlowService.shipOrder` 两套路径，后者写状态日志并种子物流轨迹。
+
+### 3.5 支付与对公凭证 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 创建/确认支付 | `POST /api/payment/create|confirm` | `CPay.vue` |
+| 对公凭证提交 | `POST /api/payment/voucher` | `CPay.vue` |
+| 凭证审核 | `POST /api/admin/payment/voucher/review/{id}` | `PaymentVoucherList.vue` |
+
+支付成功：处方药 → 待审核(1)；OTC/套餐 → 待发货(2)。支付失败恢复库存。
+
+### 3.6 处方 🟡
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 上传处方 | `POST /api/prescription/upload` | **无上传 UI** |
+| 我的处方列表 | `GET /api/prescription/list` | `CPrescriptions.vue` |
+| 药师审核 | `POST /api/pharmacist/prescription/audit` | **无药师端页面** |
+| 管理端处方 | `/api/admin/prescription/*` | — |
+
+### 3.7 优惠券 🟡
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 可领/领取 | `GET/POST /api/c/coupon/*` | **无领券页** |
+| 下单选用 | `GET /api/c/coupon/my` | `CCheckout.vue` |
+| 管理端券模板 CRUD | — | ❌ |
+
+### 3.8 售后退款 ✅
+
+| 步骤 | API | 前端 |
+|------|-----|------|
+| 用户申请 | `POST /api/order/status/refund/apply` | `COrderDetail.vue` |
+| 管理员处理 | `POST /api/admin/order/refund/{id}` | `RefundAuditList.vue` |
+| 供应商处理 | `POST /api/merchant/order/refund/{id}` | `RefundAuditList.vue` |
+
+同意 → 状态 7；驳回 → 回状态 2。**真实支付渠道退款未对接（TODO）**。
+
+### 3.9 库存 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 汇总/列表/进库/调整/预警 | `/api/admin/stock/*` 或 `/api/merchant/stock/*` | `StockManage.vue` |
+| 下单扣库存 | `ProductService.decreaseStock` | — |
+| 取消/支付失败恢复 | `restoreStock` | — |
+
+### 3.10 发票 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 用户申请 | `POST /api/user/invoice/apply` | 订单内 |
+| 管理/商家开票寄送 | `/api/admin/invoice/*`, `/api/merchant/invoice/*` | `InvoiceList.vue` |
+
+### 3.11 供应商与审核 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 入驻审核 | `/api/admin/merchant/audit/{id}` | `MerchantList.vue`（含审核弹窗基本信息） |
+| 商品审核/上下架 | `/api/admin/product/audit|online|offline` | `ProductList.vue` |
+
+### 3.12 结算对账 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 结算单列表 | `GET /api/admin/settlement/list` | `SettlementList.vue` |
+| 生成结算单 | `POST /api/admin/settlement/generate` | 按供应商+账期，扣 2% 平台费 |
+| 确认结算 | `POST /api/admin/settlement/confirm/{id}` | |
+
+统计范围：待发货/已发货/已完成且已支付订单。
+
+### 3.13 采购统计 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 统计与 CSV 导出 | `GET /api/c/purchase/stats|export` | `CPurchaseStats.vue` |
+
+### 3.14 运营日志 🟡
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 查询 | `GET /api/admin/operation-log/list` | **无专用页面** |
+| 写入 | 结算生成/确认 | — |
+
+### 3.15 数据大屏 ✅
+
+| 功能 | API | 前端 |
+|------|-----|------|
+| 概览统计 | `GET /api/admin/dashboard/stats` | `Dashboard.vue` |
+
+### 3.16 未实现 / 已知缺口
+
+- 多端（小程序/H5 独立部署）未做
+- 接口级 RBAC、子账号权限
+- 药师工作台前端
+- 优惠券运营后台、领券中心页
+- 支付退款网关对接
+- 订单出库与批次强绑定（发货不二次扣库存）
+- 操作日志全链路埋点
+
+---
+
+## 4. 后端测试用例
+
+### 4.1 自动化
+
+| 类型 | 位置 | 说明 |
+|------|------|------|
+| 单元/集成 | `src/test/java/...` | OrderStatusFlow、Payment、库存并发、阶梯价 |
+| API 冒烟 | `scripts/api-smoke-test.ps1` | 需 **最新代码** 启动的 `8080` 服务 |
+
+**执行命令**:
+
+```powershell
+cd d:\code\yao
+.\mvnw.cmd test
+powershell -ExecutionPolicy Bypass -File scripts\api-smoke-test.ps1
+```
+
+### 4.2 后端用例表
+
+| ID | 模块 | 前置条件 | 步骤 | 期望结果 |
+|----|------|----------|------|----------|
+| BE-AUTH-01 | 认证 | — | POST `/auth/login` 管理员账号 | code=200，返回 token |
+| BE-AUTH-02 | 认证 | — | 供应商账号登录 | code=200 |
+| BE-AUTH-03 | 认证 | — | 采购账号登录 | code=200 |
+| BE-AUTH-04 | 认证 | — | 无 Token GET `/admin/order/list` | 非 200 / 401 |
+| BE-ADMIN-01 | 订单 | 管理员 Token | GET `/admin/order/list` | 分页列表 |
+| BE-ADMIN-02 | 大屏 | 管理员 Token | GET `/admin/dashboard/stats` | 统计数据 |
+| BE-ADMIN-03 | 资质 | 管理员 Token | GET `/admin/qualification/list` | 列表 |
+| BE-ADMIN-04 | 支付 | 管理员 Token | GET `/admin/payment/voucher/pending` | 待审凭证列表 |
+| BE-ADMIN-05 | 结算 | 管理员 Token | GET `/admin/settlement/list` | 结算单列表 |
+| BE-ADMIN-06 | 日志 | 管理员 Token | GET `/admin/operation-log/list` | 日志列表 |
+| BE-ADMIN-07 | 退款 | 管理员 Token | GET `/admin/order/list?status=6` | 退款中订单 |
+| BE-MERCHANT-01 | 订单 | 商家 Token | GET `/merchant/order/list` | 本店订单 |
+| BE-MERCHANT-02 | 商品 | 商家 Token | GET `/merchant/product/list` | 本店商品 |
+| BE-MERCHANT-03 | 库存 | 商家 Token | GET `/merchant/stock/summary` | 库存汇总 |
+| BE-C-01 | 商品 | — | GET `/c/product/list`（公开） | code=200 |
+| BE-C-02 | 首页 | — | GET `/c/home/` | code=200 |
+| BE-C-03 | 购物车 | 采购 Token | GET `/cart/list` | 购物车数据 |
+| BE-C-04 | 订单 | 采购 Token | GET `/c/order/list` | 我的订单 |
+| BE-C-05 | 资质 | 采购 Token | GET `/qualification/my` | 资质信息 |
+| BE-C-06 | 优惠券 | 采购 Token | GET `/c/coupon/my` | 券列表 |
+| BE-C-07 | 统计 | 采购 Token | GET `/c/purchase/stats` | 统计数据 |
+| BE-C-08 | 处方 | 采购 Token | GET `/prescription/list` | 处方列表 |
+| BE-SETTLE-01 | 结算 | 管理员 Token | POST `/admin/settlement/generate` | 生成结算单 |
+| BE-SETTLE-02 | 结算 | 待结算单 | POST `/admin/settlement/confirm/{id}` | status=1 |
+| BE-REFUND-01 | 退款 | 已发货订单+采购 Token | POST `/order/status/refund/apply` | 订单 status=6 |
+| BE-REFUND-02 | 退款 | 退款中+管理员 Token | POST `/admin/order/refund/{id}` approved=false | 驳回回 status=2 |
+| BE-ORDER-01 | 状态机 | 单元测试 | `OrderStatusFlowServiceTest` | 取消/发货/退款流转 |
+| BE-PAY-01 | 支付 | 单元测试 | `PaymentServiceTest` | 支付回调/凭证 |
+| BE-STOCK-01 | 库存 | 单元测试 | `ProductStockConcurrencyTest` | 并发扣减 |
+
+---
+
+## 5. 前端测试用例
+
+> **Playwright E2E**：`admin-web/e2e/`（用例 ID 与下表一致）  
+> **执行**：`cd admin-web && npm run test:e2e`  
+> **CI**：`.github/workflows/ci.yml` → job `e2e`，结果写入 PR Checks  
+> **静态检查**：`scripts/fe-smoke-check.ps1`
+
+### 5.1 认证与路由
+
+| ID | 步骤 | 期望 |
+|----|------|------|
+| FE-AUTH-01 | 管理员 `13800000000` 登录管理端 | 进入 `/dashboard`，侧栏含商品/订单/结算等 |
+| FE-AUTH-02 | 商家 `13800000001` 登录 | 进入 `/merchant-products`，无用户管理菜单 |
+| FE-AUTH-03 | 采购 `13800000002` 登录管理端 | 重定向 `/c/home` |
+| FE-AUTH-04 | 商家访问 `/users` | 重定向 `/merchant-products` |
+| FE-AUTH-05 | 采购独立端 `consumer.html` 用商家账号 | 拒绝并提示 |
+
+### 5.2 管理端
+
+| ID | 页面 | 要点 |
+|----|------|------|
+| FE-ADM-01 | Dashboard | 图表加载、无报错 |
+| FE-ADM-02 | ProductList | 筛选、新增、审核、上下架 |
+| FE-ADM-03 | MerchantList | 审核弹窗展示供应商基本信息 |
+| FE-ADM-04 | QualificationList | 通过/驳回 |
+| FE-ADM-05 | PaymentVoucherList | 通过/驳回凭证 |
+| FE-ADM-06 | RefundAuditList | 待审/已退 Tab；同意/驳回 |
+| FE-ADM-07 | SettlementList | 生成结算单、确认结算 |
+| FE-ADM-08 | OrderList | 搜索、详情、发货、状态历史 |
+| FE-ADM-09 | StockManage | 进库、调整、低库存筛选 |
+| FE-ADM-10 | UserList | 六类用户、冻结 |
+
+### 5.3 采购端
+
+| ID | 页面 | 要点 |
+|----|------|------|
+| FE-C-01 | CHome | 轮播/秒杀/套餐入口 |
+| FE-C-02 | CProductList → Detail | 加购、阶梯价 |
+| FE-C-03 | CCart → CCheckout | 地址、优惠券、下单 |
+| FE-C-04 | CPay | 在线支付/对公+凭证 URL |
+| FE-C-05 | COrderDetail | 物流时间轴、申请退款 |
+| FE-C-06 | CQualification | 提交资质 |
+| FE-C-07 | CPrescriptions | 列表展示 |
+| FE-C-08 | CPurchaseStats | 统计与导出 |
+| FE-C-09 | CProfile | 改密 |
+
+### 5.4 已知前端缺陷（测试时需记录）
+
+| 问题 | 影响 |
+|------|------|
+| `OrderList.vue` 商家角色仍调 admin 订单 API | 商家订单管理可能异常 |
+| 无药师端页面 | userType=6 无法审方 |
+| 无处方上传 UI | 仅能依赖 API 或历史数据 |
+| 无领券中心 | 仅结算页用券 |
+
+---
+
+## 6. 测试执行记录
+
+### 6.1 后端单元测试（`mvn test`）
+
+| 执行时间 | 结果 | 说明 |
+|----------|------|------|
+| 2026-05-17 | **34/34 通过** | 已修复 `src/test/resources/application.yml` 加载 `schema-h2.sql`；补全 `logistics_info` 表 |
+
+### 6.2 API 冒烟测试（`scripts/api-smoke-test.ps1`）
+
+| 执行时间 | 通过 | 失败 | 说明 |
+|----------|------|------|------|
+| 2026-05-17 首次 | 18 | 7 | 8080 旧进程，P1/P2 接口 404 |
+| 2026-05-17 复测 | **26** | **0** | 重启最新后端后全通过；报告 `test-reports/api-smoke-20260517-205308.csv` |
+
+### 6.3 前端静态检查（`scripts/fe-smoke-check.ps1`）
+
+| 执行时间 | 通过 | 失败 | 说明 |
+|----------|------|------|------|
+| 2026-05-17 | **7** | **0** | 校验关键页面文件与路由注册（含 `consumer-routes.js`） |
+
+### 6.4 复测指引
+
+1. 停止旧 Java 进程，执行：`.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"`
+2. 等待启动后：`powershell -File scripts\api-smoke-test.ps1`
+3. 前端：`cd admin-web && npm run dev`，按第 5 节手工走查
+
+---
+
+## 7. 附录：管理端路由一览
+
+| 路径 | 页面 | 角色 |
+|------|------|------|
+| `/dashboard` | 数据概览 | admin, merchant |
+| `/products` | 商品管理 | admin |
+| `/merchant-products` | 我的商品 | merchant |
+| `/orders` | 订单管理 | admin, merchant |
+| `/stock` | 库存管理 | admin, merchant |
+| `/invoices` | 发票管理 | admin |
+| `/merchants` | 供应商管理 | admin |
+| `/qualifications` | 资质审核 | admin |
+| `/payment-vouchers` | 付款凭证审核 | admin |
+| `/refund-audit` | 退款审核 | admin, merchant |
+| `/settlements` | 结算管理 | admin |
+| `/users` | 用户管理 | admin |
+| `/c/*` | 采购商城各页 | 采购方/管理员 |
+
+---
+
+*文档结束*
+'''
+
+OUT.write_text(CONTENT, encoding='utf-8')
+print('Wrote', OUT)

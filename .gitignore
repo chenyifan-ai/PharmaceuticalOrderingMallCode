@@ -1,0 +1,32 @@
+# Build & IDE
+target/
+.idea/
+*.iml
+.DS_Store
+*.class
+*.jar
+!mvnw
+!mvnw.cmd
+!.mvn/wrapper/*
+
+# Logs & test artifacts
+test-reports/
+*.log
+
+# Frontend
+admin-web/node_modules/
+admin-web/dist/
+admin-web/playwright-report/
+admin-web/test-results/
+admin-web/blob-report/
+
+# Env & local secrets
+.env
+.env.*
+!.env.example
+
+# Uploads (optional local files)
+uploads/
+
+# Local tooling
+.tools/

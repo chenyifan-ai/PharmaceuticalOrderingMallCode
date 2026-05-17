@@ -1,0 +1,111 @@
+/* 管理端列表页：卡片与表格填满可视区域 */
+.page-container {
+  height: calc(100vh - 60px - 40px);
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-container .page-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: var(--admin-radius, 10px);
+  border: 1px solid var(--admin-border, #e4e4e7);
+  box-shadow: var(--admin-shadow);
+}
+
+.page-container .page-card :deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: 16px;
+}
+
+.page-container .search-form {
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+
+.page-container .table-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+.page-container .page-pagination {
+  flex-shrink: 0;
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 商品详情 / 编辑页：内容区可滚动 */
+.product-detail-page.page-container,
+.product-edit-page.page-container {
+  height: auto;
+  min-height: calc(100vh - 100px);
+}
+
+.product-detail-page .detail-card,
+.product-edit-page .edit-card {
+  min-height: 520px;
+}
+
+.product-detail-page .detail-card :deep(.el-card__body),
+.product-edit-page .edit-card :deep(.el-card__body) {
+  display: block;
+  overflow: visible;
+}
+
+.product-edit-page .product-form-panel.is-page {
+  width: 100%;
+}
+
+/* B 端表格：按内容自适应列宽 + 长文本省略 */
+.admin-data-table {
+  width: 100%;
+}
+
+.admin-data-table :deep(.el-table__header-wrapper),
+.admin-data-table :deep(.el-table__body-wrapper) {
+  width: 100% !important;
+}
+
+.admin-data-table :deep(.el-table__header th.el-table__cell),
+.admin-data-table :deep(.el-table__body td.el-table__cell) {
+  white-space: nowrap;
+}
+
+.admin-data-table :deep(.el-table__cell .cell) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-data-table :deep(.el-table__body) {
+  table-layout: auto;
+}
+
+/* 名称/地址等长文本列 */
+.cell-ellipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.product-edit-page .edit-card :deep(.el-card__body) {
+  max-height: none;
+}
+
+.product-detail-page .page-toolbar,
+.product-edit-page .page-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  margin: -4px 0 16px;
+  padding: 12px 0 16px;
+}

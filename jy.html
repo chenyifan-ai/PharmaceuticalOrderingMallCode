@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>前端在线解压文件夹工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/unrar-js@0.2.0/dist/unrar.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/7z-wasm@1.0.2/dist/7z-wasm.umd.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, sans-serif;
+    }
+    body {
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 0 20px;
+      background: #f5f7fa;
+    }
+    .title {
+      text-align: center;
+      margin-bottom: 25px;
+      color: #2d3748;
+    }
+    .upload-box {
+      border: 2px dashed #4299e1;
+      padding: 40px;
+      text-align: center;
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      margin-bottom: 25px;
+      transition: 0.2s;
+    }
+    .upload-box:hover {
+      background: #f0f7ff;
+    }
+    #fileInput {
+      display: none;
+    }
+    .btn {
+      padding: 10px 20px;
+      background: #3182ce;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .btn:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+    }
+    .file-list {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .file-item {
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .folder {
+      color: #d69e2e;
+      font-weight: 600;
+    }
+    .file {
+      color: #2d3748;
+    }
+    .download-btn {
+      padding: 4px 10px;
+      font-size: 12px;
+      background: #38a169;
+    }
+    .tip {
+      color: #718096;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .status {
+      color: #3182ce;
+      font-weight: 600;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="title">🗂️ 前端在线解压文件夹工具</h1>
+
+  <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+    <p>📂 点击或拖拽上传压缩包</p>
+    <p class="tip">支持：ZIP / RAR / 7Z / TAR / GZ</p>
+    <input type="file" id="fileInput" accept=".zip,.rar,.7z,.tar,.gz,.tgz">
+  </div>
+
+  <div style="text-align: center;">
+    <button class="btn" id="extractBtn" disabled>开始解压</button>
+    <button class="btn" id="downloadAllBtn" disabled>下载全部文件</button>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div class="file-list" id="fileList"></div>
+
+  <script>
+    let currentZip = null;
+    let fileMap = {}; // 存储所有文件 {路径: 文件数据}
+
+    const fileInput = document.getElementById('fileInput');
+    const extractBtn = document.getElementById('extractBtn');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const status = document.getElementById('status');
+    const fileList = document.getElementById('fileList');
+
+    // 选择文件
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      extractBtn.disabled = false;
+      status.textContent = `已选择：${file.name}`;
+      fileList.innerHTML = '';
+      fileMap = {};
+    });
+
+    // 开始解压
+    extractBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      extractBtn.disabled = true;
+      status.textContent = '⏳ 解压中，请稍候...';
+
+      try {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext === 'zip') await extractZip(file);
+        else if (ext === 'rar') await extractRar(file);
+        else if (ext === '7z') await extract7z(file);
+        else if (['tar', 'gz', 'tgz'].includes(ext)) await extractTar(file);
+        else throw new Error('不支持的文件格式');
+
+        status.textContent = '✅ 解压完成！';
+        downloadAllBtn.disabled = false;
+        renderFileList();
+      } catch (err) {
+        status.textContent = `❌ 解压失败：${err.message}`;
+        extractBtn.disabled = false;
+      }
+    });
+
+    // ========== 解压 ZIP ==========
+    async function extractZip(file) {
+      const zip = new JSZip();
+      const contents = await zip.loadAsync(file);
+      currentZip = zip;
+      for (const path in contents.files) {
+        const entry = contents.files[path];
+        if (!entry.dir) {
+          const blob = await entry.async('blob');
+          fileMap[path] = blob;
+        }
+      }
+    }
+
+    // ========== 渲染文件列表 ==========
+    function renderFileList() {
+      fileList.innerHTML = '';
+      Object.keys(fileMap).sort().forEach(path => {
+        const isFolder = path.endsWith('/');
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = isFolder ? 'folder' : 'file';
+        nameSpan.textContent = path;
+
+        const downBtn = document.createElement('button');
+        downBtn.className = 'btn download-btn';
+        downBtn.textContent = '下载';
+        downBtn.onclick = () => downloadFile(fileMap[path], path.split('/').pop());
+
+        item.appendChild(nameSpan);
+        if (!isFolder) item.appendChild(downBtn);
+        fileList.appendChild(item);
+      });
+    }
+
+    // ========== 单文件下载 ==========
+    function downloadFile(blob, name) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // ========== 下载全部文件 ==========
+    downloadAllBtn.addEventListener('click', async () => {
+      if (Object.keys(fileMap).length === 0) return;
+      status.textContent = '📦 打包中...';
+      
+      const zip = new JSZip();
+      for (const path in fileMap) {
+        zip.file(path, fileMap[path]);
+      }
+      
+      const blob = await zip.generateAsync({ type: 'blob' });
+      downloadFile(blob, '解压文件合集.zip');
+      status.textContent = '✅ 全部下载完成！';
+    });
+  </script>
+</body>
+</html>

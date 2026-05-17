@@ -1,0 +1,23 @@
+/* B 端管理后台主题 */
+:root {
+  --admin-primary: #6366f1;
+  --admin-primary-dark: #4f46e5;
+  --admin-primary-light: #818cf8;
+  --admin-bg: #f4f4f5;
+  --admin-surface: #ffffff;
+  --admin-sidebar-from: #1e1b4b;
+  --admin-sidebar-to: #312e81;
+  --admin-text: #18181b;
+  --admin-text-muted: #71717a;
+  --admin-border: #e4e4e7;
+  --admin-radius: 10px;
+  --admin-shadow: 0 1px 3px rgba(24, 24, 27, 0.06);
+}
+
+/* Element Plus 主色（管理端） */
+.layout-container {
+  --el-color-primary: var(--admin-primary);
+  --el-color-primary-light-3: #a5b4fc;
+  --el-color-primary-light-5: #c7d2fe;
+  --el-color-primary-dark-2: var(--admin-primary-dark);
+}

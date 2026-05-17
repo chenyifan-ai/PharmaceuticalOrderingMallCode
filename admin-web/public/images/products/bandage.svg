@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#fce4ec"/>
+  <rect x="120" y="240" width="360" height="120" rx="12" fill="#fff" stroke="#e91e63" stroke-width="3"/>
+  <rect x="260" y="260" width="80" height="80" fill="#f8bbd9"/>
+  <line x1="280" y1="280" x2="320" y2="320" stroke="#e91e63" stroke-width="4"/>
+  <line x1="320" y1="280" x2="280" y2="320" stroke="#e91e63" stroke-width="4"/>
+  <text x="300" y="110" text-anchor="middle" font-size="42" font-family="Microsoft YaHei, sans-serif" fill="#c2185b" font-weight="bold">ï4</text>
+  <text x="300" y="500" text-anchor="middle" font-size="26" font-family="Microsoft YaHei, sans-serif" fill="#ad1457">100G/Ò · $¤</text>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#f0faf0"/>
+  <rect x="200" y="140" width="200" height="300" rx="8" fill="#fff" stroke="#4caf50" stroke-width="3"/>
+  <rect x="230" y="180" width="140" height="80" fill="#e8f5e9"/>
+  <text x="300" y="230" text-anchor="middle" font-size="22" font-family="Microsoft YaHei, sans-serif" fill="#2e7d32">Þ±</text>
+  <circle cx="260" cy="320" r="18" fill="#81c784"/>
+  <circle cx="300" cy="320" r="18" fill="#81c784"/>
+  <circle cx="340" cy="320" r="18" fill="#81c784"/>
+  <circle cx="280" cy="360" r="18" fill="#81c784"/>
+  <circle cx="320" cy="360" r="18" fill="#81c784"/>
+  <text x="300" y="100" text-anchor="middle" font-size="40" font-family="Microsoft YaHei, sans-serif" fill="#2e7d32" font-weight="bold">Þ±öÊ</text>
+  <text x="300" y="500" text-anchor="middle" font-size="26" font-family="Microsoft YaHei, sans-serif" fill="#558b2f">0.35g×36’ · -o</text>
+</svg>
