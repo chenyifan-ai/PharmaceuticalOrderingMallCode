@@ -1,6 +1,6 @@
 # Create GitHub repo and push (requires GitHub CLI: gh auth login)
 param(
-    [string]$RepoName = 'pharmacy-mall',
+    [string]$RepoName = 'chenyifan-ai/PharmaceuticalOrderingMallCode',
     [string]$Visibility = 'private',
     [string]$Description = '医药订货系统 - Spring Boot + Vue3 B2B 订货平台'
 )
